@@ -34,7 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src/app/thong-ke/api.js"
-  ],
+, "next.config.js"  ],
   "exclude": [
     "node_modules"
   ]
