@@ -9,41 +9,46 @@ import {
     updatePhieuThu,
     deleteKhoanThu,
     getKhoanThuTuNguyen,
-    deletePhieuThu // 🟢 1. IMPORT THÊM HÀM NÀY
+    deletePhieuThu
 } from "../api";
 import {
-    Heart,
-    Plus,
-    ChevronDown,
-    ChevronUp,
-    User,
-    CheckCircle,
-    Clock,
-    DollarSign,
-    Trash2,
-    X
+    Heart, Plus, ChevronDown, ChevronUp, User, Trash2, X, AlertCircle, Clock, CheckCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function QuanLyDongGop() {
     const queryClient = useQueryClient();
 
-    // State UI
+    // --- UI STATES ---
     const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
     const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
     const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
 
-    // State Form
+    // --- FORM STATES ---
     const [newCampaignName, setNewCampaignName] = useState("");
     const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
     const [selectedHoKhauId, setSelectedHoKhauId] = useState("");
     const [donationAmount, setDonationAmount] = useState<number>(50000);
     const [donationNote, setDonationNote] = useState("");
+    const [donationStatus, setDonationStatus] = useState("Đã thu");
 
-    // Trạng thái UI thân thiện, khi gửi sẽ map lại
-    const [donationStatus, setDonationStatus] = useState("Đã nộp");
+    // --- HELPER: Chuẩn hóa ID để so sánh chính xác ---
+    const formatId = (obj: any) => {
+        if (!obj) return "";
+        const id = obj._id || obj.id || obj;
+        return String(id);
+    };
 
-    // 1. DATA FETCHING
+    // --- 1. FETCH DATA ---
+    const { data: activeHoKhau = [], isLoading: isLoadingHK } = useQuery({
+        queryKey: ["ho-khau-active"],
+        queryFn: async () => {
+            const res = await getAllHoKhau();
+            const data = Array.isArray(res) ? res : [];
+            return data.filter((hk: any) => hk.trangThai === "Đang hoạt động");
+        },
+    });
+
     const { data: dsKhoanThu = [] } = useQuery({
         queryKey: ["khoan-thu-tu-nguyen"],
         queryFn: async () => {
@@ -60,77 +65,47 @@ export default function QuanLyDongGop() {
         }
     });
 
-    const { data: dsHoKhau = [] } = useQuery({
-        queryKey: ["ho-khau"],
-        queryFn: async () => {
-            const res = await getAllHoKhau();
-            return Array.isArray(res) ? res : [];
-        },
-    });
-
-    // 2. DATA PROCESSING
+    // --- 2. XỬ LÝ DỮ LIỆU (Sửa logic so sánh ID) ---
     const campaigns = useMemo(() => {
         return dsKhoanThu.map((kt: any) => {
-            const ktId = kt._id || kt.id;
-            // Lọc ra các phiếu thu thuộc chiến dịch này
-            const donations = dsPhieuThu.filter((pt: any) =>
-                pt.chiTietThu?.some((detail: any) => detail.khoanThuId === ktId)
-            );
+            const ktId = formatId(kt);
 
-            // 🟢 THỐNG KÊ: Tiền thực nhận (Đã thu)
-            const totalMoney = donations.reduce((sum: number, pt: any) => {
+            // Lấy tất cả phiếu thu thuộc về chiến dịch này và thuộc về hộ đang hoạt động
+            const validDonations = dsPhieuThu.filter((pt: any) => {
+                const ptHoKhauId = formatId(pt.hoKhauId);
+                const isFromActiveHK = activeHoKhau.some(hk => formatId(hk) === ptHoKhauId);
+                const belongsToThisCampaign = pt.chiTietThu?.some((detail: any) => formatId(detail.khoanThuId) === ktId);
+                return isFromActiveHK && belongsToThisCampaign;
+            });
+
+            const totalMoney = validDonations.reduce((sum: number, pt: any) => {
                 if (pt.trangThai !== "Đã thu") return sum;
-                const detail = pt.chiTietThu.find((d: any) => d.khoanThuId === ktId);
+                const detail = pt.chiTietThu.find((d: any) => formatId(d.khoanThuId) === ktId);
                 return sum + (Number(detail?.soTien) || 0);
             }, 0);
 
-            // 🟢 THỐNG KÊ: Tiền cam kết (Chưa thu)
-            const pendingMoney = donations.reduce((sum: number, pt: any) => {
-                if (pt.trangThai !== "Chưa thu") return sum;
-                const detail = pt.chiTietThu.find((d: any) => d.khoanThuId === ktId);
-                return sum + (Number(detail?.soTien) || 0);
-            }, 0);
-
-            return { ...kt, donations, totalMoney, pendingMoney };
+            return { ...kt, donations: validDonations, totalMoney };
         }).sort((a: any, b: any) => b.totalMoney - a.totalMoney);
-    }, [dsKhoanThu, dsPhieuThu]);
+    }, [dsKhoanThu, dsPhieuThu, activeHoKhau]);
 
-
-    // 3. MUTATIONS
-    const createCampaignMutation = useMutation({
-        mutationFn: async () => await createKhoanThu({
-            tenKhoanThu: newCampaignName,
-            soTien: 0,
-            loaiKhoanThu: "Tự nguyện",
-            moTa: "Chiến dịch quyên góp tự nguyện",
-            ngayBatDau: new Date().toISOString()
-        }),
-        onSuccess: () => {
-            toast.success("Tạo chiến dịch thành công!");
-            setIsCreateCampaignOpen(false);
-            setNewCampaignName("");
-            queryClient.invalidateQueries({ queryKey: ["khoan-thu-tu-nguyen"] });
-        }
-    });
-
+    // --- 3. MUTATIONS ---
     const donateMutation = useMutation({
         mutationFn: async () => {
-            const hk = dsHoKhau.find((h: any) => (h._id || h.id) === selectedHoKhauId);
-            if (!hk) throw new Error("Chưa chọn hộ khẩu");
+            const hk = activeHoKhau.find((h: any) => formatId(h) === selectedHoKhauId);
+            if (!hk) throw new Error("Vui lòng chọn hộ khẩu");
 
             const payload = {
-                hoKhauId: hk._id || hk.id,
-                maPhieuThu: `DG-${selectedCampaign.tenKhoanThu.slice(0, 3).toUpperCase()}-${Date.now()}`,
-                tenChuHo: hk.chuHo?.hoTen,
-                diaChi: (hk.diaChi?.soNha || "") + " " + (hk.diaChi?.duong || ""),
-                soNhanKhau: Number(hk.soNhanKhau || 1),
+                hoKhauId: formatId(hk),
+                maPhieuThu: `DG-${Date.now()}`,
+                tenChuHo: hk.chuHo?.hoTen || "N/A",
+                diaChi: String(hk.diaChi || "Hà Nội"),
+                soNhanKhau: Number(hk.thanhVien?.length || 1),
                 nam: new Date().getFullYear(),
                 kyThu: selectedCampaign.tenKhoanThu,
                 ngayThu: new Date().toISOString(),
-                // 🟢 MAP TRẠNG THÁI: Để khớp DB
-                trangThai: donationStatus === "Đã nộp" ? "Đã thu" : "Chưa thu",
+                trangThai: donationStatus,
                 chiTietThu: [{
-                    khoanThuId: selectedCampaign._id || selectedCampaign.id,
+                    khoanThuId: formatId(selectedCampaign),
                     tenKhoanThu: selectedCampaign.tenKhoanThu,
                     soTien: Number(donationAmount),
                     ghiChu: donationNote
@@ -140,198 +115,160 @@ export default function QuanLyDongGop() {
             return await createPhieuThu(payload);
         },
         onSuccess: () => {
-            toast.success("Ghi nhận đóng góp thành công!");
+            toast.success("Ghi nhận thành công!");
             setIsDonateModalOpen(false);
             setSelectedHoKhauId("");
-            setDonationAmount(50000);
-            setDonationStatus("Đã nộp");
+            setDonationNote("");
+            // Refresh cả 2 để đồng bộ dữ liệu
             queryClient.invalidateQueries({ queryKey: ["thu-phi-history"] });
-        },
-        onError: (err: any) => toast.error("Lỗi: " + (err.response?.data?.message || err.message))
+        }
     });
 
     const payMutation = useMutation({
-        mutationFn: async (id: string) => {
-            return await updatePhieuThu(id, {
-                trangThai: "Đã thu",
-                ngayThu: new Date().toISOString(),
-                ghiChu: "Đã xác nhận nộp tiền đóng góp"
-            });
-        },
+        mutationFn: async (id: string) => await updatePhieuThu(id, {
+            trangThai: "Đã thu",
+            ngayThu: new Date().toISOString()
+        }),
         onSuccess: () => {
-            toast.success("Xác nhận nộp tiền thành công!");
+            toast.success("Đã thu tiền!");
             queryClient.invalidateQueries({ queryKey: ["thu-phi-history"] });
         }
     });
 
-    // 🟢 2. SỬA LẠI LOGIC XÓA CHIẾN DỊCH
+    const createCampaignMutation = useMutation({
+        mutationFn: async () => await createKhoanThu({
+            tenKhoanThu: newCampaignName,
+            soTien: 0,
+            loaiKhoanThu: "Tự nguyện",
+            moTa: "Quyên góp từ thiện",
+            ngayBatDau: new Date().toISOString()
+        }),
+        onSuccess: () => {
+            toast.success("Đã tạo chiến dịch!");
+            setIsCreateCampaignOpen(false);
+            setNewCampaignName("");
+            queryClient.invalidateQueries({ queryKey: ["khoan-thu-tu-nguyen"] });
+        }
+    });
+
     const deleteCampaignMutation = useMutation({
         mutationFn: async (id: string) => {
-            // Bước 1: Tìm chiến dịch trong danh sách campaigns (đã được tính toán ở useMemo)
-            const targetCamp = campaigns.find((c: any) => (c._id || c.id) === id);
-
-            // Bước 2: Nếu chiến dịch có các phiếu đóng góp (donations), xóa chúng trước
-            if (targetCamp && targetCamp.donations.length > 0) {
-                // Tạo một mảng các Promise để xóa từng phiếu thu
-                const deletePromises = targetCamp.donations.map((d: any) =>
-                    deletePhieuThu(d._id || d.id)
-                );
-                // Chờ tất cả phiếu thu bị xóa hết
-                await Promise.all(deletePromises);
+            const target = campaigns.find((c: any) => formatId(c) === id);
+            if (target?.donations.length > 0) {
+                await Promise.all(target.donations.map((d: any) => deletePhieuThu(formatId(d))));
             }
-
-            // Bước 3: Sau khi xóa sạch dữ liệu liên quan, xóa chiến dịch (khoản thu)
             return await deleteKhoanThu(id);
         },
         onSuccess: () => {
-            toast.success("Đã xóa chiến dịch và toàn bộ dữ liệu liên quan!");
-            // Refresh lại cả 2 luồng dữ liệu
+            toast.success("Đã xóa chiến dịch!");
             queryClient.invalidateQueries({ queryKey: ["khoan-thu-tu-nguyen"] });
             queryClient.invalidateQueries({ queryKey: ["thu-phi-history"] });
-        },
-        onError: (err: any) => {
-            toast.error("Lỗi khi xóa: " + (err.message || "Không xác định"));
         }
     });
 
-    // 4. HANDLERS
-    const handleDeleteCampaign = (id: string, hasDonations: boolean) => {
-        toast(hasDonations ? "Chiến dịch này đang có dữ liệu. Xóa sẽ mất hết lịch sử đóng góp!" : "Xác nhận xóa chiến dịch?", {
-            description: "Hành động này không thể hoàn tác.",
-            action: { label: "Xóa tất cả", onClick: () => deleteCampaignMutation.mutate(id) },
-            cancel: { label: "Hủy", onClick: () => { } },
-            duration: 5000
-        });
-    };
-
-    const handleConfirmPay = (pId: string) => {
-        toast("Xác nhận hộ đã nộp tiền mặt/chuyển khoản?", {
-            action: { label: "Xác nhận", onClick: () => payMutation.mutate(pId) },
-            cancel: { label: "Hủy", onClick: () => { } },
-        });
-    }
-
-    const toggleExpand = (id: string) => setExpandedCampaignId(prev => prev === id ? null : id);
-    const openDonateModal = (campaign: any) => {
-        setSelectedCampaign(campaign);
-        setIsDonateModalOpen(true);
-    };
-
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
-            {/* HEADER */}
+            {/* Header */}
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                         <Heart className="text-red-500 fill-red-500" /> Quản Lý Đóng Góp
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">Vận động và tiếp nhận quyên góp tự nguyện cho cộng đồng</p>
+                    <p className="text-gray-500 text-sm">Chỉ tính toán cho hộ khẩu <b>Đang hoạt động</b></p>
                 </div>
                 <button
                     onClick={() => setIsCreateCampaignOpen(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl shadow-lg hover:bg-gray-800 transition-all active:scale-95"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl shadow-lg hover:scale-105 transition-all"
                 >
                     <Plus size={20} /> Tạo Chiến Dịch
                 </button>
             </div>
 
-            {/* LIST CAMPAIGNS */}
+            {/* Campaign List */}
             <div className="space-y-4">
                 {campaigns.map((camp: any) => {
-                    const isExpanded = expandedCampaignId === (camp._id || camp.id);
-                    const campId = camp._id || camp.id;
-                    const hasDonations = camp.donations.length > 0;
-
+                    const campId = formatId(camp);
+                    const isExpanded = expandedCampaignId === campId;
                     return (
-                        <div key={campId} className={`bg-white rounded-xl border transition-all overflow-hidden ${isExpanded ? "ring-2 ring-red-100 border-red-200 shadow-md" : "border-gray-200"}`}>
-                            <div onClick={() => toggleExpand(campId)} className="p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50 select-none group">
+                        <div key={campId} className={`bg-white rounded-xl border transition-all ${isExpanded ? "ring-2 ring-red-100 border-red-200 shadow-md" : "border-gray-200"}`}>
+                            <div onClick={() => setExpandedCampaignId(isExpanded ? null : campId)} className="p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50">
                                 <div className="flex items-center gap-4">
                                     <div className={`p-3 rounded-full ${isExpanded ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}>
                                         <Heart size={24} className={isExpanded ? "fill-red-600" : ""} />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-gray-800 group-hover:text-red-600 transition-colors">{camp.tenKhoanThu}</h3>
-                                        <p className="text-xs text-gray-500">{camp.donations.length} lượt tương tác</p>
+                                        <h3 className="text-lg font-bold">{camp.tenKhoanThu}</h3>
+                                        <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider">
+                                            {camp.donations.length} lượt đóng góp
+                                        </p>
                                     </div>
                                 </div>
-
                                 <div className="flex items-center gap-6">
-                                    {camp.pendingMoney > 0 && (
-                                        <div className="text-right hidden md:block">
-                                            <p className="text-[10px] text-orange-500 uppercase font-bold">Chưa nộp (Cam kết)</p>
-                                            <p className="text-sm font-bold text-orange-400">
-                                                {camp.pendingMoney.toLocaleString()} ₫
-                                            </p>
-                                        </div>
-                                    )}
                                     <div className="text-right">
-                                        <p className="text-[10px] text-gray-400 uppercase font-bold">Tổng thực nhận</p>
-                                        <p className="text-xl font-bold text-red-600">{camp.totalMoney.toLocaleString()} ₫</p>
+                                        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">Thực nhận</p>
+                                        <p className="text-xl font-extrabold text-red-600">{camp.totalMoney.toLocaleString()} ₫</p>
                                     </div>
-
-                                    <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteCampaign(campId, hasDonations); }} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all">
+                                    <div className="flex items-center gap-2 border-l pl-4">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if(confirm("Xóa chiến dịch sẽ mất toàn bộ dữ liệu?")) deleteCampaignMutation.mutate(campId);
+                                            }}
+                                            className="p-2 text-gray-400 hover:text-red-500"
+                                        >
                                             <Trash2 size={18} />
                                         </button>
-                                        {isExpanded ? <ChevronUp className="text-gray-400" /> : <ChevronDown className="text-gray-400" />}
+                                        {isExpanded ? <ChevronUp /> : <ChevronDown />}
                                     </div>
                                 </div>
                             </div>
 
                             {isExpanded && (
-                                <div className="border-t border-gray-100 bg-gray-50/50 p-6 animate-in slide-in-from-top-2 duration-200">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h4 className="font-semibold text-gray-700 flex items-center gap-2"><User size={18} /> Danh sách đóng góp</h4>
-                                        <button onClick={(e) => { e.stopPropagation(); openDonateModal(camp); }} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium shadow flex items-center gap-2">
+                                <div className="p-6 border-t bg-gray-50/40">
+                                    <div className="flex justify-between mb-4 items-center">
+                                        <h4 className="font-bold text-gray-700 flex items-center gap-2"><User size={18}/> Danh sách đóng góp</h4>
+                                        <button
+                                            onClick={() => { setSelectedCampaign(camp); setIsDonateModalOpen(true); }}
+                                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm flex items-center gap-2"
+                                        >
                                             <Plus size={16} /> Ghi nhận mới
                                         </button>
                                     </div>
-
-                                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                                        <table className="w-full text-left text-sm border-collapse">
-                                            <thead className="bg-gray-100 text-gray-500 font-semibold uppercase text-[10px]">
+                                    <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-100 text-gray-500 font-bold text-[10px] uppercase">
                                                 <tr>
-                                                    <th className="p-3">Hộ đóng góp</th>
-                                                    <th className="p-3">Ngày ghi nhận</th>
+                                                    <th className="p-3 text-left">Chủ hộ</th>
                                                     <th className="p-3 text-center">Trạng thái</th>
                                                     <th className="p-3 text-right">Số tiền</th>
-                                                    <th className="p-3 text-right">Thao tác</th>
+                                                    <th className="p-3"></th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-100">
+                                            <tbody className="divide-y">
                                                 {camp.donations.length === 0 ? (
-                                                    <tr><td colSpan={5} className="p-8 text-center text-gray-400 italic">Chưa có hộ gia đình nào đóng góp cho chiến dịch này</td></tr>
-                                                ) : camp.donations.map((d: any, idx: number) => {
-                                                    const detail = d.chiTietThu.find((x: any) => x.khoanThuId === campId);
-                                                    const isPaid = d.trangThai === "Đã thu";
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                                            <td className="p-3 font-medium text-gray-800">{d.tenChuHo}</td>
-                                                            <td className="p-3 text-gray-500">{new Date(d.ngayThu).toLocaleDateString("vi-VN")}</td>
-                                                            <td className="p-3 text-center">
-                                                                {isPaid ? (
-                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-bold border border-green-200">
-                                                                        <CheckCircle size={10} /> Đã thu
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 text-[10px] font-bold border border-orange-200">
-                                                                        <Clock size={10} /> Chưa nộp
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className={`p-3 text-right font-bold ${isPaid ? "text-gray-700" : "text-orange-500"}`}>
-                                                                {Number(detail?.soTien).toLocaleString()} ₫
-                                                            </td>
-                                                            <td className="p-3 text-right">
-                                                                {!isPaid && (
-                                                                    <button onClick={() => handleConfirmPay(d._id || d.id)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm">
-                                                                        Xác nhận đã thu tiền
-                                                                    </button>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                })}
+                                                    <tr><td colSpan={4} className="p-6 text-center text-gray-400 italic">Chưa có dữ liệu.</td></tr>
+                                                ) : camp.donations.map((d: any) => (
+                                                    <tr key={formatId(d)} className="hover:bg-gray-50">
+                                                        <td className="p-3 font-medium text-gray-800">{d.tenChuHo}</td>
+                                                        <td className="p-3 text-center">
+                                                            {d.trangThai === "Đã thu" ?
+                                                                <span className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold">ĐÃ THU</span> :
+                                                                <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-[10px] font-bold">CHƯA THU</span>
+                                                            }
+                                                        </td>
+                                                        <td className="p-3 text-right font-bold text-gray-900">{d.tongTien.toLocaleString()} ₫</td>
+                                                        <td className="p-3 text-right">
+                                                            {d.trangThai !== "Đã thu" && (
+                                                                <button
+                                                                    onClick={() => payMutation.mutate(formatId(d))}
+                                                                    className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold"
+                                                                >
+                                                                    THU TIỀN
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
@@ -342,66 +279,92 @@ export default function QuanLyDongGop() {
                 })}
             </div>
 
-            {/* MODAL TẠO CHIẾN DỊCH */}
-            {isCreateCampaignOpen && (
+            {/* MODAL ĐÓNG GÓP */}
+            {isDonateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Tạo Chiến Dịch Mới</h3>
-                            <button onClick={() => setIsCreateCampaignOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                    <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6 border-b pb-4">
+                            <h3 className="text-xl font-extrabold text-red-600">{selectedCampaign?.tenKhoanThu}</h3>
+                            <button onClick={() => setIsDonateModalOpen(false)}><X /></button>
                         </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tên chiến dịch</label>
-                            <input autoFocus type="text" value={newCampaignName} onChange={(e) => setNewCampaignName(e.target.value)} placeholder="VD: Quỹ Vì Người Nghèo 2024..." className="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-black" />
+
+                        <div className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Chọn hộ gia đình (*)</label>
+                                <select
+                                    className="w-full border-2 border-gray-100 p-3 rounded-xl outline-none"
+                                    value={selectedHoKhauId}
+                                    onChange={(e) => setSelectedHoKhauId(e.target.value)}
+                                >
+                                    <option value="">-- Danh sách hộ hoạt động --</option>
+                                    {activeHoKhau.map((hk: any) => (
+                                        <option key={formatId(hk)} value={formatId(hk)}>
+                                            {hk.maHoKhau} - {hk.chuHo?.hoTen}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Số tiền (₫)</label>
+                                <input
+                                    type="number"
+                                    className="w-full border-2 border-red-50 p-4 rounded-xl text-2xl font-black text-red-600"
+                                    value={donationAmount}
+                                    onChange={(e) => setDonationAmount(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setDonationStatus("Đã thu")}
+                                    className={`p-3 rounded-xl border-2 font-bold ${donationStatus === "Đã thu" ? "bg-green-50 border-green-500 text-green-700" : "border-gray-100 text-gray-400"}`}
+                                >
+                                    Đã thu tiền
+                                </button>
+                                <button
+                                    onClick={() => setDonationStatus("Chưa thu")}
+                                    className={`p-3 rounded-xl border-2 font-bold ${donationStatus === "Chưa thu" ? "bg-orange-50 border-orange-500 text-orange-700" : "border-gray-100 text-gray-400"}`}
+                                >
+                                    Ghi nợ (Chưa thu)
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex justify-end gap-3">
-                            <button onClick={() => setIsCreateCampaignOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Hủy</button>
-                            <button onClick={() => createCampaignMutation.mutate()} disabled={!newCampaignName} className="px-4 py-2 bg-black text-white rounded-lg disabled:opacity-50 font-bold">Tạo Ngay</button>
+
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button onClick={() => setIsDonateModalOpen(false)} className="px-5 py-2.5 text-gray-400 font-bold">HỦY</button>
+                            <button
+                                onClick={() => donateMutation.mutate()}
+                                disabled={!selectedHoKhauId || donationAmount <= 0}
+                                className="px-10 py-2.5 bg-red-600 text-white rounded-xl font-black shadow-lg disabled:opacity-30"
+                            >
+                                XÁC NHẬN
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL ĐÓNG GÓP */}
-            {isDonateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in zoom-in-95">
-                        <h3 className="text-2xl font-bold mb-6 text-red-600">{selectedCampaign?.tenKhoanThu}</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Hộ gia đình ủng hộ (*)</label>
-                                <select className="w-full border p-3 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-red-500" value={selectedHoKhauId} onChange={(e) => setSelectedHoKhauId(e.target.value)}>
-                                    <option value="">-- Chọn hộ khẩu --</option>
-                                    {dsHoKhau.map((hk: any) => (
-                                        <option key={hk._id || hk.id} value={hk._id || hk.id}>{hk.maHoKhau} - {hk.chuHo?.hoTen}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Số tiền đóng góp (₫)</label>
-                                <input type="number" className="w-full border-2 border-red-100 p-3 rounded-lg text-2xl font-bold text-red-600 outline-none focus:border-red-500" value={donationAmount} onChange={(e) => setDonationAmount(Number(e.target.value))} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái nộp tiền</label>
-                                <div className="flex gap-4">
-                                    <label className="flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer has-[:checked]:bg-green-50 has-[:checked]:border-green-500 transition-all">
-                                        <input type="radio" name="status" value="Đã nộp" checked={donationStatus === "Đã nộp"} onChange={(e) => setDonationStatus(e.target.value)} className="w-4 h-4 accent-green-600" />
-                                        <span className="font-bold text-green-700 text-sm">Đã nộp tiền</span>
-                                    </label>
-                                    <label className="flex-1 flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer has-[:checked]:bg-orange-50 has-[:checked]:border-orange-500 transition-all">
-                                        <input type="radio" name="status" value="Chưa nộp" checked={donationStatus === "Chưa nộp"} onChange={(e) => setDonationStatus(e.target.value)} className="w-4 h-4 accent-orange-600" />
-                                        <span className="font-bold text-orange-700 text-sm">Chưa nộp</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Ghi chú</label>
-                                <textarea rows={2} className="w-full border p-3 rounded-lg outline-none focus:ring-1 focus:ring-gray-300" value={donationNote} onChange={(e) => setDonationNote(e.target.value)} placeholder="Nhập lời nhắn hoặc ghi chú ủng hộ..."></textarea>
-                            </div>
-                        </div>
-                        <div className="mt-6 pt-4 border-t flex justify-end gap-3">
-                            <button onClick={() => setIsDonateModalOpen(false)} className="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl">Đóng</button>
-                            <button onClick={() => donateMutation.mutate()} disabled={!selectedHoKhauId || donationAmount <= 0} className="px-8 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-lg disabled:opacity-50">Xác nhận</button>
+            {/* Modal Tạo Chiến Dịch */}
+            {isCreateCampaignOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                        <h3 className="text-xl font-black mb-4 uppercase">Chiến dịch mới</h3>
+                        <input
+                            className="w-full border-2 border-gray-100 p-4 rounded-xl mb-4 outline-none font-bold"
+                            placeholder="Tên chiến dịch..."
+                            value={newCampaignName}
+                            onChange={(e) => setNewCampaignName(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setIsCreateCampaignOpen(false)} className="px-4 py-2 font-bold text-gray-400">Hủy</button>
+                            <button
+                                onClick={() => createCampaignMutation.mutate()}
+                                disabled={!newCampaignName}
+                                className="px-8 py-2 bg-black text-white rounded-xl font-black disabled:opacity-20"
+                            >
+                                TẠO
+                            </button>
                         </div>
                     </div>
                 </div>
