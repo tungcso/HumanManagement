@@ -3,30 +3,36 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
+import { Response } from 'express';
+
 import { RegisterDto } from './dto/register.dto';
 import { UserRole } from '../users/schemas/user.schema';
-import { Response } from 'express';
-import { ConfigService } from '@nestjs/config';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
-    private jwtService: JwtService,
-    private configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
-  async validateUser(username: string, password: string): Promise<any> {
+  async validateUser(
+    username: string,
+    password: string,
+  ): Promise<Record<string, unknown> | null> {
     const user = await this.usersService.findByUsername(username);
+
     if (
       user &&
       (await this.usersService.validatePassword(password, user.password))
     ) {
-      const { password, ...result } = user.toObject();
+      const { password: _, ...result } = user.toObject();
       return result;
     }
+
     return null;
   }
 
@@ -37,7 +43,7 @@ export class AuthService {
       role: user.role,
     };
 
-    const refrest_token = this.jwtService.sign(
+    const refreshToken = this.jwtService.sign(
       {
         username: user.username,
         sub: user._id,
@@ -48,15 +54,16 @@ export class AuthService {
         expiresIn: '7d',
       },
     );
-    res.cookie('refresh_token', refrest_token, {
+
+    res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
+
     return {
       access_token: this.jwtService.sign(payload),
-
       user: {
         id: user._id,
         username: user.username,
@@ -69,9 +76,9 @@ export class AuthService {
 
   refresh(res: Response) {
     try {
-      const refresh_token = res.req.cookies['refresh_token'];
+      const refreshToken = res.req.cookies['refresh_token'];
 
-      const verified = this.jwtService.verify(refresh_token, {
+      const verified = this.jwtService.verify(refreshToken, {
         secret: this.configService.get<string>('REFRESH_TOKEN_SECRET'),
       });
 
@@ -81,10 +88,10 @@ export class AuthService {
         role: verified.role,
       };
 
-      const access_token = this.jwtService.sign(payload);
-      return { access_token };
-    } catch (e) {
-      throw new UnauthorizedException('Refresh token sai hay sao y');
+      const accessToken = this.jwtService.sign(payload);
+      return { access_token: accessToken };
+    } catch (error) {
+      throw new UnauthorizedException('Refresh token invalid or expired');
     }
   }
 
@@ -94,7 +101,7 @@ export class AuthService {
       role: UserRole.CAN_BO,
     });
 
-    const { password, ...result } = (user as any).toObject();
+    const { password: _, ...result } = (user as any).toObject();
     return result;
   }
 

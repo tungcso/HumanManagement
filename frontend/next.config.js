@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // THÊM DÒNG NÀY: Bắt buộc để Render tìm thấy thư mục 'out'
+  output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
