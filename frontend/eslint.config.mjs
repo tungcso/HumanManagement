@@ -10,7 +10,7 @@ const compat = new FlatCompat({
 });
 
 export default [
-  // Kế thừa config của Next.js
+  // Kế thừa config của Next.jss
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 
   // Custom rules + ignore
