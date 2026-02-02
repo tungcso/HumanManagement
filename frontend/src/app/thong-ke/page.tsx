@@ -1,11 +1,6 @@
-"use client";
+'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import {
-  getDanhSachDotThu,
-  getChiTietHoDaNop,
-  getChiTietHoChuaNop,
-  getLichSuHo,
-} from './api';
+import { getDanhSachDotThu, getChiTietHoDaNop, getChiTietHoChuaNop, getLichSuHo } from './api';
 
 export default function ThongKePage() {
   const [nam, setNam] = useState<number>(new Date().getFullYear());
@@ -28,7 +23,9 @@ export default function ThongKePage() {
   const [lichSuFilterText, setLichSuFilterText] = useState<string>('');
   const [lichSuFilterStatus, setLichSuFilterStatus] = useState<string>('all');
   const [selectedPhieu, setSelectedPhieu] = useState<any | null>(null);
-  const [toast, setToast] = useState<{ msg: string; type?: 'info' | 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type?: 'info' | 'success' | 'error' } | null>(
+    null,
+  );
 
   // Add CSS for animations
   useEffect(() => {
@@ -98,7 +95,9 @@ export default function ThongKePage() {
     if (!dotFilterText.trim()) return;
     if (loading) return;
     const q = dotFilterText.trim().toLowerCase();
-    const filtered = dotThu.filter((d: any) => (d.kyThu || '').toString().toLowerCase().includes(q));
+    const filtered = dotThu.filter((d: any) =>
+      (d.kyThu || '').toString().toLowerCase().includes(q),
+    );
     if (filtered.length === 0) {
       showToast(`Không tìm thấy kết quả cho "${dotFilterText}"`, 'info');
     }
@@ -180,13 +179,13 @@ export default function ThongKePage() {
       setChiTietHoDaNop(Array.isArray(dataDaNop) ? dataDaNop : []);
       setChiTietHoChuaNop(Array.isArray(dataChuaNop) ? dataChuaNop : []);
       // Auto-select first household (prefer paid list, else unpaid) and load its history
-      const firstHoId = (Array.isArray(dataDaNop) && dataDaNop.length > 0)
-        ? (dataDaNop[0].hoKhauId?._id ?? dataDaNop[0].hoKhauId)
-        : (Array.isArray(dataChuaNop) && dataChuaNop.length > 0)
-          ? (dataChuaNop[0].hoKhauId?._id ?? dataChuaNop[0].hoKhauId)
-          : null;
+      const firstHoId =
+        Array.isArray(dataDaNop) && dataDaNop.length > 0
+          ? (dataDaNop[0].hoKhauId?._id ?? dataDaNop[0].hoKhauId)
+          : Array.isArray(dataChuaNop) && dataChuaNop.length > 0
+            ? (dataChuaNop[0].hoKhauId?._id ?? dataChuaNop[0].hoKhauId)
+            : null;
       if (firstHoId) {
-        // openHoDetails will set selectedHo and fetch its history
         await openHoDetails(firstHoId);
       } else {
         setSelectedHo(null);
@@ -197,7 +196,7 @@ export default function ThongKePage() {
       setChiTietHoDaNop([]);
       setChiTietHoChuaNop([]);
     }
-    // reset filters when opening a dot
+
     setChiTietFilterText('');
     setChiTietFilterStatus('all');
     setChiTietLoading(false);
@@ -206,7 +205,7 @@ export default function ThongKePage() {
   const openHoDetails = async (hoKhauId?: string | null) => {
     setLichSuLoading(true);
     setError(null);
-    // Guard: do not call backend with null/undefined id (causes 500)
+
     if (!hoKhauId) {
       setSelectedHo(null);
       setLichSuHo(null);
@@ -268,7 +267,7 @@ export default function ThongKePage() {
 
       if (ph.trangThai === 'Đã thu') daNop += sum;
       else if (ph.trangThai === 'Đang nợ') conNo += sum;
-      else daNop += sum; // default treat as paid for summary
+      else daNop += sum;
     }
     return { daNop, conNo };
   }, [lichSuHo]);
@@ -279,7 +278,9 @@ export default function ThongKePage() {
       <div className="animate-slide-in mb-8">
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
           <span className="heading-emoji text-4xl">📊</span>
-          <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Thống kê thu phí</span>
+          <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Thống kê thu phí
+          </span>
         </h1>
         <div className="heading-underline bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full h-1 w-40 mb-2"></div>
         <p className="text-gray-600">Quản lý và theo dõi tình hình thu tiền</p>
@@ -298,9 +299,11 @@ export default function ThongKePage() {
             />
           </div>
           <button
-            onClick={() => getDanhSachDotThu(nam).then((data) => {
-              if (data) setDotThu(data);
-            })}
+            onClick={() =>
+              getDanhSachDotThu(nam).then((data) => {
+                if (data) setDotThu(data);
+              })
+            }
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:shadow-lg transition-all transform hover:scale-105 active:scale-95"
           >
             ⟳ Tải dữ liệu
@@ -433,10 +436,11 @@ export default function ThongKePage() {
                     <button
                       key={page}
                       onClick={() => setDotCurrentPage(page)}
-                      className={`px-3 py-2 rounded-lg font-semibold transition ${dotCurrentPage === page
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
+                      className={`px-3 py-2 rounded-lg font-semibold transition ${
+                        dotCurrentPage === page
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
+                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
                     >
                       {page}
                     </button>
@@ -538,17 +542,27 @@ export default function ThongKePage() {
                       <table className="w-full text-base">
                         <thead>
                           <tr className="bg-gradient-to-r from-green-50 to-emerald-50 border-b-2 border-green-300">
-                            <th className="text-left px-4 py-3 font-bold text-gray-800">Mã phiếu</th>
+                            <th className="text-left px-4 py-3 font-bold text-gray-800">
+                              Mã phiếu
+                            </th>
                             {selectedDot && selectedDot.toLowerCase().includes('tháng') && (
                               <th className="text-left px-4 py-3 font-bold text-gray-800">Phí</th>
                             )}
                             <th className="text-left px-4 py-3 font-bold text-gray-800">Mã hộ</th>
                             <th className="text-left px-4 py-3 font-bold text-gray-800">Chủ hộ</th>
                             <th className="text-left px-4 py-3 font-bold text-gray-800">Địa chỉ</th>
-                            <th className="text-left px-4 py-3 font-bold text-gray-800">Thời gian nộp</th>
-                            <th className="text-center px-4 py-3 font-bold text-gray-800">Trạng thái</th>
-                            <th className="text-right px-4 py-3 font-bold text-gray-800">Tổng tiền</th>
-                            <th className="text-center px-4 py-3 font-bold text-gray-800">Hành động</th>
+                            <th className="text-left px-4 py-3 font-bold text-gray-800">
+                              Thời gian nộp
+                            </th>
+                            <th className="text-center px-4 py-3 font-bold text-gray-800">
+                              Trạng thái
+                            </th>
+                            <th className="text-right px-4 py-3 font-bold text-gray-800">
+                              Tổng tiền
+                            </th>
+                            <th className="text-center px-4 py-3 font-bold text-gray-800">
+                              Hành động
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -559,11 +573,16 @@ export default function ThongKePage() {
                               if (q) {
                                 const name = (pt.tenChuHo || '').toString().toLowerCase();
                                 const code = (pt.maPhieuThu || '').toString().toLowerCase();
-                                const hid = (pt.hoKhauId?._id || pt.hoKhauId || '').toString().toLowerCase();
-                                if (!name.includes(q) && !code.includes(q) && !hid.includes(q)) return false;
+                                const hid = (pt.hoKhauId?._id || pt.hoKhauId || '')
+                                  .toString()
+                                  .toLowerCase();
+                                if (!name.includes(q) && !code.includes(q) && !hid.includes(q))
+                                  return false;
                               }
                               if (feeQ) {
-                                const fees = (pt.chiTietThu || []).map((ct: any) => (ct.tenKhoanThu || '').toString().toLowerCase());
+                                const fees = (pt.chiTietThu || []).map((ct: any) =>
+                                  (ct.tenKhoanThu || '').toString().toLowerCase(),
+                                );
                                 if (!fees.some((f: string) => f.includes(feeQ))) return false;
                               }
                               return true;
@@ -574,7 +593,9 @@ export default function ThongKePage() {
                                 onClick={() => openHoDetails(pt.hoKhauId?._id ?? pt.hoKhauId)}
                                 className="border-b border-gray-200 hover:bg-green-50 transition-colors cursor-pointer"
                               >
-                                <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-600">{pt.maPhieuThu}</td>
+                                <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-600">
+                                  {pt.maPhieuThu}
+                                </td>
                                 {selectedDot && selectedDot.toLowerCase().includes('tháng') && (
                                   <td className="px-4 py-3 text-sm text-gray-700">
                                     {pt.chiTietThu && pt.chiTietThu.length > 0
@@ -583,12 +604,17 @@ export default function ThongKePage() {
                                   </td>
                                 )}
                                 <td className="px-4 py-3 font-mono text-sm text-gray-600">
-                                  {(pt.hoKhauId?._id || pt.hoKhauId || '').toString().slice(0, 8)}...
+                                  {(pt.hoKhauId?._id || pt.hoKhauId || '').toString().slice(0, 8)}
+                                  ...
                                 </td>
-                                <td className="px-4 py-3 font-semibold text-gray-900">{pt.tenChuHo}</td>
+                                <td className="px-4 py-3 font-semibold text-gray-900">
+                                  {pt.tenChuHo}
+                                </td>
                                 <td className="px-4 py-3 text-gray-700">{pt.diaChi}</td>
                                 <td className="px-4 py-3 text-gray-700">
-                                  {pt.ngayThu ? new Date(pt.ngayThu).toLocaleDateString('vi-VN') : '—'}
+                                  {pt.ngayThu
+                                    ? new Date(pt.ngayThu).toLocaleDateString('vi-VN')
+                                    : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <span className="inline-block text-xs font-bold px-3 py-1 rounded-full bg-green-200 text-green-800">
@@ -600,7 +626,10 @@ export default function ThongKePage() {
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); openHoDetails(pt.hoKhauId?._id ?? pt.hoKhauId); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openHoDetails(pt.hoKhauId?._id ?? pt.hoKhauId);
+                                    }}
                                     className="inline-block bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-2 rounded-lg text-sm font-bold hover:shadow-lg transition-all transform hover:scale-105 active:scale-95"
                                   >
                                     Chi tiết
@@ -632,17 +661,27 @@ export default function ThongKePage() {
                       <table className="w-full text-base">
                         <thead>
                           <tr className="bg-gradient-to-r from-red-50 to-rose-50 border-b-2 border-red-300">
-                            <th className="text-left px-4 py-3 font-bold text-gray-800">Mã phiếu</th>
+                            <th className="text-left px-4 py-3 font-bold text-gray-800">
+                              Mã phiếu
+                            </th>
                             {selectedDot && selectedDot.toLowerCase().includes('tháng') && (
                               <th className="text-left px-4 py-3 font-bold text-gray-800">Phí</th>
                             )}
                             <th className="text-left px-4 py-3 font-bold text-gray-800">Mã hộ</th>
                             <th className="text-left px-4 py-3 font-bold text-gray-800">Chủ hộ</th>
                             <th className="text-left px-4 py-3 font-bold text-gray-800">Địa chỉ</th>
-                            <th className="text-left px-4 py-3 font-bold text-gray-800">Thời gian nộp</th>
-                            <th className="text-center px-4 py-3 font-bold text-gray-800">Trạng thái</th>
-                            <th className="text-right px-4 py-3 font-bold text-gray-800">Tổng tiền</th>
-                            <th className="text-center px-4 py-3 font-bold text-gray-800">Hành động</th>
+                            <th className="text-left px-4 py-3 font-bold text-gray-800">
+                              Thời gian nộp
+                            </th>
+                            <th className="text-center px-4 py-3 font-bold text-gray-800">
+                              Trạng thái
+                            </th>
+                            <th className="text-right px-4 py-3 font-bold text-gray-800">
+                              Tổng tiền
+                            </th>
+                            <th className="text-center px-4 py-3 font-bold text-gray-800">
+                              Hành động
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -653,11 +692,16 @@ export default function ThongKePage() {
                               if (q) {
                                 const name = (pt.tenChuHo || '').toString().toLowerCase();
                                 const code = (pt.maPhieuThu || '').toString().toLowerCase();
-                                const hid = (pt.hoKhauId?._id || pt.hoKhauId || '').toString().toLowerCase();
-                                if (!name.includes(q) && !code.includes(q) && !hid.includes(q)) return false;
+                                const hid = (pt.hoKhauId?._id || pt.hoKhauId || '')
+                                  .toString()
+                                  .toLowerCase();
+                                if (!name.includes(q) && !code.includes(q) && !hid.includes(q))
+                                  return false;
                               }
                               if (feeQ) {
-                                const fees = (pt.chiTietThu || []).map((ct: any) => (ct.tenKhoanThu || '').toString().toLowerCase());
+                                const fees = (pt.chiTietThu || []).map((ct: any) =>
+                                  (ct.tenKhoanThu || '').toString().toLowerCase(),
+                                );
                                 if (!fees.some((f: string) => f.includes(feeQ))) return false;
                               }
                               return true;
@@ -668,7 +712,9 @@ export default function ThongKePage() {
                                 onClick={() => openHoDetails(pt.hoKhauId?._id ?? pt.hoKhauId)}
                                 className="border-b border-gray-200 hover:bg-red-50 transition-colors cursor-pointer"
                               >
-                                <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-600">{pt.maPhieuThu}</td>
+                                <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-600">
+                                  {pt.maPhieuThu}
+                                </td>
                                 {selectedDot && selectedDot.toLowerCase().includes('tháng') && (
                                   <td className="px-4 py-3 text-sm text-gray-700">
                                     {pt.chiTietThu && pt.chiTietThu.length > 0
@@ -677,19 +723,25 @@ export default function ThongKePage() {
                                   </td>
                                 )}
                                 <td className="px-4 py-3 font-mono text-sm text-gray-600">
-                                  {(pt.hoKhauId?._id || pt.hoKhauId || '').toString().slice(0, 8)}...
+                                  {(pt.hoKhauId?._id || pt.hoKhauId || '').toString().slice(0, 8)}
+                                  ...
                                 </td>
-                                <td className="px-4 py-3 font-semibold text-gray-900">{pt.tenChuHo}</td>
+                                <td className="px-4 py-3 font-semibold text-gray-900">
+                                  {pt.tenChuHo}
+                                </td>
                                 <td className="px-4 py-3 text-gray-700">{pt.diaChi}</td>
                                 <td className="px-4 py-3 text-gray-700">
-                                  {pt.ngayThu ? new Date(pt.ngayThu).toLocaleDateString('vi-VN') : '—'}
+                                  {pt.ngayThu
+                                    ? new Date(pt.ngayThu).toLocaleDateString('vi-VN')
+                                    : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <span
-                                    className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${pt.trangThai === 'Đang nợ'
-                                      ? 'bg-red-200 text-red-800'
-                                      : 'bg-yellow-200 text-yellow-800'
-                                      }`}
+                                    className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${
+                                      pt.trangThai === 'Đang nợ'
+                                        ? 'bg-red-200 text-red-800'
+                                        : 'bg-yellow-200 text-yellow-800'
+                                    }`}
                                   >
                                     {pt.trangThai}
                                   </span>
@@ -699,7 +751,10 @@ export default function ThongKePage() {
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); openHoDetails(pt.hoKhauId?._id ?? pt.hoKhauId); }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openHoDetails(pt.hoKhauId?._id ?? pt.hoKhauId);
+                                    }}
                                     className="inline-block bg-gradient-to-r from-red-500 to-rose-500 text-white px-3 py-2 rounded-lg text-sm font-bold hover:shadow-lg transition-all transform hover:scale-105 active:scale-95"
                                   >
                                     Chi tiết
@@ -722,7 +777,9 @@ export default function ThongKePage() {
           <div className="animate-fade-in bg-white rounded-xl shadow-xl border border-green-200 p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-bold text-gray-800">Lịch sử nộp tiền hộ: {selectedHo}</h3>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Lịch sử nộp tiền hộ: {selectedHo}
+                </h3>
                 <div className="h-1 w-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mt-2"></div>
               </div>
               <button
@@ -744,7 +801,9 @@ export default function ThongKePage() {
                   <div>
                     <p className="text-green-700 font-semibold text-sm mb-1">✓ Đã nộp</p>
                     <p className="text-3xl font-bold text-green-600">
-                      {formatVND(Math.max(derivedLichSuTotals.daNop, Number(lichSuHo?.tongKet?.daNop ?? 0)))}
+                      {formatVND(
+                        Math.max(derivedLichSuTotals.daNop, Number(lichSuHo?.tongKet?.daNop ?? 0)),
+                      )}
                     </p>
                     <p className="text-green-600 text-xs mt-2">đ</p>
                   </div>
@@ -758,7 +817,9 @@ export default function ThongKePage() {
                   <div>
                     <p className="text-red-700 font-semibold text-sm mb-1">⚠ Còn nợ</p>
                     <p className="text-3xl font-bold text-red-600">
-                      {formatVND(Math.max(derivedLichSuTotals.conNo, Number(lichSuHo?.tongKet?.conNo ?? 0)))}
+                      {formatVND(
+                        Math.max(derivedLichSuTotals.conNo, Number(lichSuHo?.tongKet?.conNo ?? 0)),
+                      )}
                     </p>
                     <p className="text-red-600 text-xs mt-2">đ</p>
                   </div>
@@ -771,7 +832,9 @@ export default function ThongKePage() {
             <div className="bg-white border-t mt-4 pt-4">
               <div className="mb-4 flex items-center justify-between">
                 <h4 className="text-lg font-semibold text-gray-800">Danh sách phiếu thu</h4>
-                <span className="text-sm text-gray-500">{(lichSuHo?.danhSachPhieuThu?.length ?? 0) + ' phiếu'}</span>
+                <span className="text-sm text-gray-500">
+                  {(lichSuHo?.danhSachPhieuThu?.length ?? 0) + ' phiếu'}
+                </span>
               </div>
 
               {lichSuHo?.danhSachPhieuThu && lichSuHo.danhSachPhieuThu.length === 0 ? (
@@ -786,18 +849,33 @@ export default function ThongKePage() {
                         <th className="text-left px-4 py-3 font-bold text-gray-800">Mã phiếu</th>
                         <th className="text-left px-4 py-3 font-bold text-gray-800">Ngày</th>
                         <th className="text-left px-4 py-3 font-bold text-gray-800">Tổng tiền</th>
-                        <th className="text-center px-4 py-3 font-bold text-gray-800">Trạng thái</th>
+                        <th className="text-center px-4 py-3 font-bold text-gray-800">
+                          Trạng thái
+                        </th>
                         <th className="text-center px-4 py-3 font-bold text-gray-800">Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
                       {lichSuHo?.danhSachPhieuThu?.map((phieu: any) => (
-                        <tr key={phieu._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-600">{phieu.maPhieuThu}</td>
-                          <td className="px-4 py-3 text-gray-700">{phieu.ngayThu ? new Date(phieu.ngayThu).toLocaleDateString('vi-VN') : '—'}</td>
-                          <td className="px-4 py-3 font-bold text-gray-800">{phieu.tongTien?.toLocaleString?.('vi-VN') ?? phieu.tongTien} đ</td>
+                        <tr
+                          key={phieu._id}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-600">
+                            {phieu.maPhieuThu}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {phieu.ngayThu
+                              ? new Date(phieu.ngayThu).toLocaleDateString('vi-VN')
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-800">
+                            {phieu.tongTien?.toLocaleString?.('vi-VN') ?? phieu.tongTien} đ
+                          </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${phieu.trangThai === 'Đã thu' ? 'bg-green-200 text-green-800' : phieu.trangThai === 'Đang nợ' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'}`}>
+                            <span
+                              className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${phieu.trangThai === 'Đã thu' ? 'bg-green-200 text-green-800' : phieu.trangThai === 'Đang nợ' ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'}`}
+                            >
                               {phieu.trangThai ?? '—'}
                             </span>
                           </td>
@@ -839,9 +917,19 @@ export default function ThongKePage() {
                   <h4 className="text-lg font-bold">Chi tiết phiếu: {selectedPhieu.maPhieuThu}</h4>
                   <p className="text-sm text-gray-600">Chủ hộ: {selectedPhieu.tenChuHo}</p>
                   <p className="text-sm text-gray-600">Địa chỉ: {selectedPhieu.diaChi}</p>
-                  <p className="text-sm text-gray-600">Ngày: {selectedPhieu.ngayThu ? new Date(selectedPhieu.ngayThu).toLocaleDateString('vi-VN') : '—'}</p>
+                  <p className="text-sm text-gray-600">
+                    Ngày:{' '}
+                    {selectedPhieu.ngayThu
+                      ? new Date(selectedPhieu.ngayThu).toLocaleDateString('vi-VN')
+                      : '—'}
+                  </p>
                 </div>
-                <button onClick={closePhieuDetails} className="text-gray-500 hover:text-gray-800 text-2xl">✕</button>
+                <button
+                  onClick={closePhieuDetails}
+                  className="text-gray-500 hover:text-gray-800 text-2xl"
+                >
+                  ✕
+                </button>
               </div>
 
               <div className="divide-y space-y-4">
@@ -872,21 +960,27 @@ export default function ThongKePage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-lg">{icon}</span>
-                                <span className="text-sm font-medium text-gray-800">{ct.tenKhoanThu}</span>
+                                <span className="text-sm font-medium text-gray-800">
+                                  {ct.tenKhoanThu}
+                                </span>
                               </div>
                               {ct.ghiChu && (
                                 <p className="text-xs text-gray-500 mt-1 ml-6">{ct.ghiChu}</p>
                               )}
                             </div>
                             <div className="text-right ml-4">
-                              <div className="text-sm font-bold text-green-600">{formatVND(ct.soTien)} đ</div>
+                              <div className="text-sm font-bold text-green-600">
+                                {formatVND(ct.soTien)} đ
+                              </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">Không có khoản thu chi tiết.</div>
+                    <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+                      Không có khoản thu chi tiết.
+                    </div>
                   )}
                 </div>
 
@@ -895,22 +989,27 @@ export default function ThongKePage() {
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="p-3 bg-blue-50 rounded-lg">
                       <p className="text-xs text-gray-600 mb-1">Số lượng khoản</p>
-                      <p className="text-lg font-bold text-blue-600">{selectedPhieu.chiTietThu?.length || 0}</p>
+                      <p className="text-lg font-bold text-blue-600">
+                        {selectedPhieu.chiTietThu?.length || 0}
+                      </p>
                     </div>
                     <div className="p-3 bg-green-50 rounded-lg">
                       <p className="text-xs text-gray-600 mb-1">Tổng cộng</p>
-                      <p className="text-lg font-bold text-green-600">{formatVND(selectedPhieu.tongTien)} đ</p>
+                      <p className="text-lg font-bold text-green-600">
+                        {formatVND(selectedPhieu.tongTien)} đ
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                     <span className="text-sm font-medium text-gray-700">Trạng thái</span>
                     <span
-                      className={`inline-block text-sm font-semibold px-3 py-1 rounded-full ${selectedPhieu.trangThai === 'Đã thu'
-                        ? 'bg-green-200 text-green-800'
-                        : selectedPhieu.trangThai === 'Đang nợ'
-                          ? 'bg-red-200 text-red-800'
-                          : 'bg-yellow-200 text-yellow-800'
-                        }`}
+                      className={`inline-block text-sm font-semibold px-3 py-1 rounded-full ${
+                        selectedPhieu.trangThai === 'Đã thu'
+                          ? 'bg-green-200 text-green-800'
+                          : selectedPhieu.trangThai === 'Đang nợ'
+                            ? 'bg-red-200 text-red-800'
+                            : 'bg-yellow-200 text-yellow-800'
+                      }`}
                     >
                       {selectedPhieu.trangThai ?? '—'}
                     </span>

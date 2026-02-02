@@ -20,7 +20,7 @@ import {
   Trash2,
   Plus,
   Banknote,
-  AlertCircle, // Icon cảnh báo nợ
+  AlertCircle, 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -111,7 +111,7 @@ export default function QuanLyThuPhi() {
     });
   };
 
-  // 4. LOGIC THỐNG KÊ (GIỮ NGUYÊN)
+  // 4. LOGIC THỐNG KÊ
   const stats = useMemo(() => {
     let totalBatBuoc = 0; let totalTuNguyen = 0; let totalDangNo = 0;
     const listDetailBatBuoc: any[] = []; const listDetailTuNguyen: any[] = []; const listDetailDangNo: any[] = [];
@@ -262,7 +262,6 @@ export default function QuanLyThuPhi() {
   );
 }
 
-// Sub-component cho Card thống kê
 function StatCard({ title, amount, color, icon, isDebt }: any) {
   const colors: any = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',

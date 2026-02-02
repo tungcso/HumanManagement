@@ -119,7 +119,6 @@ export default function QuanLyDongGop() {
             setIsDonateModalOpen(false);
             setSelectedHoKhauId("");
             setDonationNote("");
-            // Refresh cả 2 để đồng bộ dữ liệu
             queryClient.invalidateQueries({ queryKey: ["thu-phi-history"] });
         }
     });

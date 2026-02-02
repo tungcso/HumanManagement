@@ -112,7 +112,7 @@ export default function QuanLyCacKhoanThu() {
     },
   });
 
-  // --- HÀM XỬ LÝ CHÍNH (ĐÃ FIX THEO LỖI TRONG ẢNH) ---
+  // --- HÀM XỬ LÝ CHÍNH ---
   const handleThuPhiLe = async (hoKhau: any, status: 'Đã thu' | 'Chưa thu' = 'Đã thu') => {
     if (!activeKhoanThu) return toast.error("Vui lòng chọn loại phí");
 
@@ -120,13 +120,13 @@ export default function QuanLyCacKhoanThu() {
     const ktId = getCleanId(activeKhoanThu);
     const hkId = getCleanId(hoKhau);
 
-    // Chuẩn bị payload theo đúng yêu cầu Validation của Backend
+
     const payload = {
       hoKhauId: hkId,
       maPhieuThu: `PT-${ktId.slice(-4)}-${Date.now().toString().slice(-6)}`,
       tenChuHo: hoKhau.chuHo?.hoTen || 'N/A',
       diaChi: String(hoKhau.diaChi || hoKhau.chuHo?.diaChi || "Địa chỉ chưa cập nhật"),
-      soNhanKhau: hoKhau.thanhVien?.length || 0, // THÊM TRƯỜNG NÀY (Sửa lỗi: soNhanKhau must be a number)
+      soNhanKhau: hoKhau.thanhVien?.length || 0,
       nam: selectedYear,
       kyThu: kyThuLabel,
       trangThai: status,
@@ -144,7 +144,6 @@ export default function QuanLyCacKhoanThu() {
       loading: status === 'Đã thu' ? 'Đang ghi nhận thu tiền...' : 'Đang ghi nhận nợ...',
       success: 'Thao tác thành công!',
       error: (err) => {
-        // Hiển thị lỗi chi tiết từ backend nếu có
         const serverMsg = err.response?.data?.message;
         return Array.isArray(serverMsg) ? serverMsg.join(', ') : (serverMsg || 'Lỗi kết nối server');
       },
