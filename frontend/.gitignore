@@ -8,7 +8,7 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# 2. Environment Variables (Biến môi trường - TUYỆT ĐỐI BẢO MẬT)
+# 2. Environment Variables (Biến môi trường - TUYỆT ĐỐI BẢO MẬT) 
 .env
 .env.local
 .env.development.local
