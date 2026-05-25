@@ -1,8 +1,8 @@
-import axios from "axios";
-import { clearUser, getAT, setAT } from "./AuthToken";
+import axios from 'axios';
+import { clearUser, getAT, setAT } from './AuthToken';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "https://humanmanagement.onrender.com",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://human-management.onrender.com/api',
   withCredentials: true,
 });
 
@@ -33,14 +33,14 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/auth/refresh")
+      !originalRequest.url?.includes('/auth/refresh')
     ) {
       originalRequest._retry = true;
 
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          const res = await api.post("/auth/refresh");
+          const res = await api.post('/auth/refresh');
           const newAT = res.data.access_token;
           setAT(newAT);
 
@@ -70,7 +70,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
